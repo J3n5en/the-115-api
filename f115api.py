@@ -3,8 +3,13 @@
 import requests,ssl,json,time,os
 import threading
 import sys
+import re
+import os.path
+import os
 from pyquery import PyQuery as pq
 QRImagePath = os.path.join(os.getcwd(), 'qrcode.jpg')
+
+
 
 def getInfos():
     global uid,uidTime,sign,session_id
@@ -188,6 +193,83 @@ def addLinktasks(linklist):
             except Exception, e:
                 print(linkinfo['name']) 
 
+def get_bt_upload_info():
+    global cid,upload_url
+    # getTasksign()
+    url = 'http://115.com/'
+    params = {
+        'ct':'lixian',
+        'ac':'get_id',
+        'torrent': '1',
+        '_':str(int(time.time()*1000)),
+    }
+    cid = json.loads(mySession.post(url,params=params).text)['cid']
+    req = mySession.get('http://115.com/?tab=offline&mode=wangpa').content
+    reg = re.compile('upload\?(\S+?)"')
+    ids = re.findall(reg, req)
+    upload_url = ids[0]
+
+
+def upload_torrent(filename,filedir):
+    url = 'http://upload.115.com/upload?' + upload_url
+    files = {
+        'Filename':('', 'torrent.torrent', ''),
+        'target': ('', 'U_1_'+str(cid), ''),
+        'Filedata':('torrent.torrent',open(filedir,'rb'),'application/octet-stream'),
+        'Upload':('', 'Submit Query', ''),
+    }
+    # mySession.get('http://upload.115.com/crossdomain.xml')
+    req = mySession.post(url = url, files = files)
+    req = json.loads(req.content)
+    if req['state'] is False:
+        print("上传种子出错了1")
+        return False
+    data = {'file_id': req['data']['file_id']}
+    post_url = 'http://115.com/lixian/?ct=lixian&ac=torrent'
+    data = {
+        'pickcode': req['data']['pick_code'],
+        'sha1': req['data']['sha1'],
+        'uid':userid,
+        'sign': tsign,
+        'time': ttime,
+        }
+    resp = mySession.post(url=post_url,data=data)
+    resp = json.loads(resp.content)
+    if resp['state'] is False:
+        print("上传种子出错2")
+        return False
+    wanted = None
+    idx = 0
+    for item in resp['torrent_filelist_web']:
+        if item['wanted'] != -1:
+            if wanted is None:
+                wanted = str(idx)
+            else:
+                wanted = wanted + ',' + str(idx)
+        idx += 1
+    post_url = 'http://115.com/lixian/?ct=lixian&ac=add_task_bt'
+    data = {
+        'info_hash': resp['info_hash'],
+        'wanted': wanted,
+        'savepath': resp['torrent_name'].replace('\'', ''),
+        'uid':userid,
+        'sign': tsign,
+        'time': ttime,
+        }
+    resp = mySession.post(post_url,data).content
+    ret = json.loads(resp)
+    print ret['name']
+    if 'error_msg' in ret:
+        print(ret['error_msg'])
+
+def add_many_bt():
+    get_bt_upload_info()
+    for parent,dirnames,filenames in os.walk("torrents"):
+        for filename in filenames:
+            filedir = os.path.join(parent,filename)
+            # time.sleep(1)
+            upload_torrent(filename,filedir)
+            # print open(qq,'rb')  
 
 def main():
     global mySession
@@ -207,8 +289,14 @@ def main():
     getUserinfo() # 获取登陆用户信息
     # addLinktask("magnet:?xt=urn:btih:690ba0361597ffb2007ad717bd805447f2acc624")
     # addLinktasks([link]) 传入一个list
-
+    # print tsign
+    # print "fuck"
+    # get_bt_upload_info()
+    # upload_torrent()
+    add_many_bt()
 
 
 if __name__ == '__main__':
     main()
+    # print cid
+    # print requests.get("http://j3n5en.com", proxies=proxies).text
