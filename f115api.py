@@ -6,6 +6,7 @@ import sys
 import re
 import os.path
 import os
+import subprocess
 from pyquery import PyQuery as pq
 QRImagePath = os.path.join(os.getcwd(), 'qrcode.png')
 
@@ -60,6 +61,12 @@ def getQrcode():
     f = open(QRImagePath, 'wb')
     f.write(r.content)
     f.close()
+    if sys.platform.find('darwin') >= 0:
+        subprocess.call(['open', QRImagePath])
+    elif sys.platform.find('linux') >= 0:
+        subprocess.call(['xdg-open', QRImagePath])
+    else:
+        os.startfile(QRImagePath)
     print(u"使用115手机客户端扫码登录")
     time.sleep(1) 
 
