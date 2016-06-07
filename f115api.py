@@ -7,7 +7,7 @@ import re
 import os.path
 import os
 from pyquery import PyQuery as pq
-QRImagePath = os.path.join(os.getcwd(), 'qrcode.jpg')
+QRImagePath = os.path.join(os.getcwd(), 'qrcode.png')
 
 
 
@@ -273,7 +273,8 @@ def add_many_bt():
 
 def main():
     global mySession
-    ssl._create_default_https_context = ssl._create_unverified_context
+    if hasattr(ssl,'_create_unverified_context'):
+        ssl._create_default_https_context = ssl._create_unverified_context
     headers = {'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2663.0 Safari/537.36'}
     mySession = requests.Session()
     mySession.headers.update(headers)
